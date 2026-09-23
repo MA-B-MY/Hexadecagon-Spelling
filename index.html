@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spell Runner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- MAIN MENU SCREEN -->
+    <div id="menu-screen" class="screen active">
+        <div class="menu-container">
+            <h1 class="menu-title">SPELL RUNNER</h1>
+            <p class="menu-score" id="bestScoreDisplay">Highest Record: 0</p>
+            
+            <!-- NEW: Native Color Adjuster -->
+            <div class="color-picker">
+                <p>Select Character Color:</p>
+                <div class="color-options">
+                    <input type="color" id="playerColorPicker" value="#2196F3">
+                </div>
+            </div>
+
+            <button id="startHtmlBtn" class="menu-btn">START GAME</button>
+            <button id="viewDictHtmlBtn" class="menu-btn dict">VIEW DICTIONARY</button>
+        </div>
+    </div>
+
+    <!-- HOW TO PLAY SCREEN (Click anywhere to start) -->
+    <!-- HOW TO PLAY SCREEN (Click anywhere to start) -->
+    <div id="how-to-play-screen" class="screen" style="cursor: pointer;">
+        <div class="dict-container" style="text-align: center; pointer-events: none; width: 80%; max-width: 600px;">
+            <h1 style="color: #FF9800; margin-bottom: 20px; font-size: 42px; text-shadow: 2px 2px 0px #000;">HOW TO PLAY</h1>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.75); padding: 25px; border-radius: 12px; border: 3px solid #FF9800; margin-bottom: 30px; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                <h3 style="color: #4CAF50; margin-bottom: 12px; font-size: 22px;">🎮 Controls</h3>
+                <ul style="list-style: none; padding: 0; margin-bottom: 25px; font-size: 18px; line-height: 1.8; color: #EEE;">
+                    <li><strong style="color: #FFEB3B;">[W] / [↑]</strong> : Jump (Press twice to Double Jump!)</li>
+                    <li><strong style="color: #FFEB3B;">[A] / [D]</strong> : Move Left / Right</li>
+                    <li><strong style="color: #FFEB3B;">[SPACE]</strong> : Submit your completed word</li>
+                    <li><strong style="color: #FFEB3B;">[P]</strong> : Pause Game</li>
+                </ul>
+
+                <h3 style="color: #4CAF50; margin-bottom: 12px; font-size: 22px;">🎯 The Rules</h3>
+                <ul style="list-style: none; padding: 0; margin-bottom: 0; font-size: 18px; line-height: 1.8; color: #EEE;">
+                    <li>Collect floating letters to build words (min. 2 letters).</li>
+                    <li>Submit valid words with the Spacebar to score points!</li>
+                    <li><span style="color: #F44336; font-weight: bold;">⚠️ DANGER:</span> If you spell a fake word, you explode!</li>
+                    <li><span style="color: #F44336; font-weight: bold;">⚠️ DANGER:</span> Don't let obstacles push you off the left screen!</li>
+                </ul>
+            </div>
+            
+            <p class="pulse-text" style="font-size: 26px; font-weight: bold; color: #FFF; margin-bottom: 20px; text-shadow: 1px 1px 2px #000;">Click anywhere to start running...</p>
+            
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">Dictionary provided by dwyl/english-words</p>
+        </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- DICTIONARY SCREEN -->
+    <div id="dictionary-screen" class="screen">
+        <div class="dict-container">
+            <button id="backToMenuBtn" class="back-btn">← Back to Menu</button>
+            <h1>Word Library</h1>
+            <input type="text" id="searchInput" placeholder="Search for a specific word...">
+            <div class="alphabet-container" id="alphabetContainer"></div>
+            <button id="resetBtn" class="reset-btn">Show All Words</button>
+            <div class="word-grid" id="wordGrid"></div>
+        </div>
+    </div>
+
+    <!-- Load scripts at the end -->
+    <script src="design.js"></script>
+    <script src="game.js"></script>
+    <script src="dictionary.js"></script>
+</body>
+</html>

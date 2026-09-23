@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Spell Runner",
+  "version": "1.0",
+  "description": "An endless runner combined with a spelling game.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Play Spell Runner"
+  },
+  "host_permissions": [
+    "https://raw.githubusercontent.com/*"
+  ]
+}
