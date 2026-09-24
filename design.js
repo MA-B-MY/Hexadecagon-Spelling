@@ -34,11 +34,8 @@ function drawCloud(ctx, x, y, width) {
 function drawGameScene() {
     ctx.imageSmoothingEnabled = false;
 
-    // 1. Draw Sky Background
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    skyGrad.addColorStop(0, '#1A237E'); 
-    skyGrad.addColorStop(1, '#64B5F6'); 
-    ctx.fillStyle = skyGrad;
+   // 1. Draw solid single-color background
+    ctx.fillStyle = '#87CEEB'; // Sky Blue. Change this hex code to your preferred color (e.g., '#1E1E1E' for dark gray)
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     // 2. Draw Parallax Clouds (Background)
