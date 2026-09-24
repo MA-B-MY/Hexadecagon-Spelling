@@ -212,3 +212,6 @@ h1 {
 .pulse-text {
     animation: pulseFade 1.5s infinite ease-in-out;
 }
+#gameCanvas {
+    background-color: #87CEEB; /* Match your JS canvas color */
+}
