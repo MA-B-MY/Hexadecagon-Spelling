@@ -141,7 +141,7 @@ const gameDictionary = new Trie();
 // --- GAME STATE MANAGEMENT ---
 const STATE_PLAYING = 'PLAYING';
 const STATE_PAUSED = 'PAUSED';
-const STATE_EXPLODING = 'EXPLODING'; // NEW STATE
+const STATE_EXPLODING = 'EXPLODING';
 const STATE_GAMEOVER = 'GAMEOVER';
 
 let gameState = null; 
@@ -157,11 +157,11 @@ let timePlayed = 0;
 let groundOffset = 0;
 let cloudOffset = 0;
 
-let baseSpeed = 1; 
-let globalSpeed = 1;
+let baseSpeed = 2; 
+let globalSpeed = 2;
 const maxGlobalSpeed = 12; 
 let distanceTraveled = 0;
-let nextLetterDistance = 300;
+let nextLetterDistance = 100; // Increased spawn rate (1.5x)
 let nextObstacleDistance = 600;
 
 // --- DYNAMIC CRISP CANVAS SETUP ---
@@ -319,7 +319,7 @@ const player = {
 
 const activeLetters = [];
 const activeObstacles = [];
-let particles = []; // Stores explosion data
+let particles = []; 
 let explosionTimer = 0;
 let frameCount = 0;
 
@@ -379,12 +379,10 @@ function handleCollision(box) {
             let boxCenter = box.x + (box.width / 2);
             
             if (playerCenter < boxCenter) {
-                // Obstacle pushes player to the left
                 player.x = box.x - player.width; 
                 
-                // NEW: Squish mechanic check. If pushed to x=0 or less, EXPLODE.
                 if (player.x <= 0) {
-                    player.x = 0; // Lock character to the edge visually
+                    player.x = 0; 
                     triggerExplosion();
                 }
             } else {
@@ -394,16 +392,13 @@ function handleCollision(box) {
     }
 }
 
-// NEW: EXPLOSION ANIMATION LOGIC
 function triggerExplosion() {
     if (gameState === STATE_EXPLODING || gameState === STATE_GAMEOVER) return;
     gameState = STATE_EXPLODING;
     playSound('gameover'); 
     
-    // Lock in the time played so it stops ticking during the animation
     timePlayed = Math.floor((Date.now() - startTime) / 1000);
     
-    // Spawn shatter particles
     particles = [];
     for (let i = 0; i < 30; i++) {
         particles.push({
@@ -417,12 +412,11 @@ function triggerExplosion() {
             rotSpeed: (Math.random() - 0.5) * 0.5
         });
     }
-    explosionTimer = 60; // Wait 60 frames (1 second) before showing Game Over menu
+    explosionTimer = 60; 
 }
 
 function triggerGameOver() {
     gameState = STATE_GAMEOVER;
-    // Time and sound already triggered inside triggerExplosion()
     if (score > bestScore) {
         bestScore = score;
         localStorage.setItem('spellRunnerBestScore', bestScore);
@@ -438,15 +432,15 @@ function resetGame() {
     score = 0;
     activeLetters.length = 0;
     activeObstacles.length = 0;
-    particles = []; // Clear old explosions
+    particles = []; 
     frameCount = 0;
     groundOffset = 0;
     cloudOffset = 0;
     startTime = Date.now();
     
-    globalSpeed = 1; 
+    globalSpeed = 2; 
     distanceTraveled = 0;
-    nextLetterDistance = 300;
+    nextLetterDistance = 100; // Increased spawn rate (1.5x)
     nextObstacleDistance = 600;
     
     player.x = 50;
@@ -466,11 +460,10 @@ function isSpawnAreaClear() {
 
 // --- MAIN GAME LOOP ---
 function gameLoop() {
-    // 1. PLAYING LOGIC
     if (gameState === STATE_PLAYING) {
+        
         const secondsPlayed = Math.floor((Date.now() - startTime) / 1000);
-        const speedLevel = Math.floor(secondsPlayed / 30); 
-        globalSpeed = Math.min(baseSpeed + (speedLevel * 0.5), maxGlobalSpeed);
+        globalSpeed = Math.min(baseSpeed + (secondsPlayed * 0.01), maxGlobalSpeed);
         
         distanceTraveled += globalSpeed;
         player.wasGroundedLastFrame = player.isGrounded;
@@ -505,7 +498,8 @@ function gameLoop() {
         if (distanceTraveled >= nextLetterDistance) {
             if (isSpawnAreaClear()) {
                 spawnLetter();
-                nextLetterDistance = distanceTraveled + (Math.random() * 300 + 200); 
+                // Increased spawn rate logic: Math.random() * 200 + 133
+                nextLetterDistance = distanceTraveled + (Math.random() * 200 + 133); 
             } else {
                 nextLetterDistance += 20; 
             }
@@ -539,7 +533,6 @@ function gameLoop() {
                 score += 1; 
                 activeLetters.splice(i, 1);
                 
-                // Explode if invalid word is built!
                 if (!gameDictionary.isValidPrefix(currentWord)) {
                     triggerExplosion();
                 }
@@ -548,14 +541,13 @@ function gameLoop() {
             if (letter.x + letter.width < 0) activeLetters.splice(i, 1);
         }
     } 
-    // 2. EXPLODING ANIMATION LOOP
     else if (gameState === STATE_EXPLODING) {
         explosionTimer--;
         particles.forEach(p => {
             p.x += p.vx;
             p.y += p.vy;
-            p.life -= 0.015; // Fade out slowly
-            p.rotation += p.rotSpeed; // Spin the shattered pieces
+            p.life -= 0.015; 
+            p.rotation += p.rotSpeed; 
         });
         if (explosionTimer <= 0) {
             triggerGameOver();
