@@ -10,7 +10,7 @@ function updateMenuScore() {
 }
 updateMenuScore();
 
-// --- PLAYER COLOR STATE (Native Picker) ---
+// --- PLAYER COLOR STATE ---
 let playerColor = localStorage.getItem('spellRunnerPlayerColor') || '#2196F3'; 
 const colorPicker = document.getElementById('playerColorPicker');
 if (colorPicker) {
@@ -126,13 +126,22 @@ class Trie {
     }
     isValidWord(word) {
         if (word.length < 2) return false; 
-        
         let node = this.root;
         for (let char of word) {
             if (!node.children[char]) return false;
             node = node.children[char];
         }
         return node.isEndOfWord;
+    }
+    // NEW: Needed for Smart Spawner & Wildcards
+    getValidNextLetters(prefix) {
+        if (prefix === "") return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+        let node = this.root;
+        for (let char of prefix) {
+            if (!node.children[char]) return [];
+            node = node.children[char];
+        }
+        return Object.keys(node.children);
     }
 }
 
@@ -154,6 +163,13 @@ let startTime = 0;
 let pauseStartTime = 0;
 let timePlayed = 0;
 
+// NEW: System Mechanics State Variables
+let isWarning = false;
+let warningTimer = 0;
+let slowMoTimer = 0;
+let longestWord = "";
+let totalWords = 0;
+
 let groundOffset = 0;
 let cloudOffset = 0;
 
@@ -161,7 +177,7 @@ let baseSpeed = 2;
 let globalSpeed = 2;
 const maxGlobalSpeed = 12; 
 let distanceTraveled = 0;
-let nextLetterDistance = 100; // Increased spawn rate (1.5x)
+let nextLetterDistance = 100; 
 let nextObstacleDistance = 600;
 
 // --- DYNAMIC CRISP CANVAS SETUP ---
@@ -185,7 +201,7 @@ resizeCanvas();
 
 const keys = { left: false, right: false, jump: false };
 
-const startBtn = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 + 30, width: 200, height: 60 };
+const startBtn = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 + 60, width: 200, height: 60 };
 const pauseBtn = { x: GAME_WIDTH - 60, y: 10, width: 50, height: 50 }; 
 const pauseMenuResumeBtn  = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 - 40, width: 200, height: 40 };
 const pauseMenuRestartBtn = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 + 10, width: 200, height: 40 };
@@ -244,7 +260,7 @@ canvas.addEventListener('mousedown', (e) => {
 
     if (gameState === STATE_GAMEOVER) {
         if (mouseX >= startBtn.x && mouseX <= startBtn.x + startBtn.width &&
-            mouseY >= startBtn.y + 40 && mouseY <= startBtn.y + 40 + startBtn.height) {
+            mouseY >= startBtn.y && mouseY <= startBtn.y + startBtn.height) {
             resetGame();
             gameState = STATE_PLAYING;
         }
@@ -263,6 +279,18 @@ window.addEventListener('keydown', (e) => {
     if (gameState === STATE_GAMEOVER && e.key === 'Enter') {
         resetGame();
         gameState = STATE_PLAYING;
+        return;
+    }
+
+    // NEW: Backspace Mechanic
+    if (gameState === STATE_PLAYING && e.key === 'Backspace') {
+        if (currentWord.length > 0) {
+            currentWord = currentWord.slice(0, -1);
+            if (gameDictionary.isValidPrefix(currentWord)) {
+                isWarning = false; 
+                warningTimer = 0;
+            }
+        }
         return;
     }
 
@@ -295,7 +323,13 @@ window.addEventListener('keydown', (e) => {
 
         if (e.key === ' ') {
             if (gameDictionary.isValidWord(currentWord)) {
-                score += (currentWord.length * 2);
+                // NEW: Exponential Scoring (Length^2 * 10)
+                let wordScore = Math.pow(currentWord.length, 2) * 10;
+                score += wordScore;
+                
+                totalWords++;
+                if (currentWord.length > longestWord.length) longestWord = currentWord;
+                
                 currentWord = ""; 
                 playSound('collect'); 
             }
@@ -323,11 +357,46 @@ let particles = [];
 let explosionTimer = 0;
 let frameCount = 0;
 
+// NEW: Generates explosion particles at a specific spot
+function spawnParticles(x, y, count, color) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 15,
+            vy: (Math.random() - 0.5) * 15,
+            size: Math.random() * 8 + 4,
+            life: 1.0,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.5,
+            color: color
+        });
+    }
+}
+
+// NEW: Smart Spawner
 function spawnLetter() {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const randomChar = chars[Math.floor(Math.random() * chars.length)];
     const isTop = Math.random() > 0.5;
-    activeLetters.push({ char: randomChar, x: GAME_WIDTH, y: isTop ? 150 : 300, width: 40, height: 40 });
+    let type = 'letter'; 
+    let charToSpawn = '';
+    
+    let rand = Math.random();
+    if (rand < 0.03) type = 'bomb';
+    else if (rand < 0.08) type = 'freeze';
+    else if (rand < 0.13) type = 'wildcard';
+    else {
+        // Smart Spawner: 75% chance to spawn a character that guarantees a valid prefix continuation
+        const validNext = gameDictionary.getValidNextLetters(currentWord);
+        if (validNext.length > 0 && Math.random() < 0.75) {
+            charToSpawn = validNext[Math.floor(Math.random() * validNext.length)];
+        } else {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            charToSpawn = chars[Math.floor(Math.random() * chars.length)];
+        }
+    }
+    
+    let displayChar = type === 'bomb' ? '💣' : type === 'freeze' ? '❄️' : type === 'wildcard' ? '?' : charToSpawn;
+    
+    activeLetters.push({ char: displayChar, type: type, realChar: charToSpawn, x: GAME_WIDTH, y: isTop ? 150 : 300, width: 40, height: 40 });
 }
 
 function spawnObstacle() {
@@ -348,16 +417,10 @@ function spawnObstacle() {
     } else {
         const platformY = Math.floor(Math.random() * 120) + 160; 
         if (platformY < 220) {
-            activeObstacles.push({
-                x: GAME_WIDTH, y: platformY + 90, width: 70, height: 20, color: '#8B4513'
-            });
-            activeObstacles.push({
-                x: GAME_WIDTH + 150, y: platformY, width: 100, height: 20, color: '#8B4513'
-            });
+            activeObstacles.push({ x: GAME_WIDTH, y: platformY + 90, width: 70, height: 20, color: '#8B4513' });
+            activeObstacles.push({ x: GAME_WIDTH + 150, y: platformY, width: 100, height: 20, color: '#8B4513' });
         } else {
-            activeObstacles.push({
-                x: GAME_WIDTH, y: platformY, width: 100, height: 20, color: '#8B4513'
-            });
+            activeObstacles.push({ x: GAME_WIDTH, y: platformY, width: 100, height: 20, color: '#8B4513' });
         }
     }
 }
@@ -380,7 +443,6 @@ function handleCollision(box) {
             
             if (playerCenter < boxCenter) {
                 player.x = box.x - player.width; 
-                
                 if (player.x <= 0) {
                     player.x = 0; 
                     triggerExplosion();
@@ -398,20 +460,7 @@ function triggerExplosion() {
     playSound('gameover'); 
     
     timePlayed = Math.floor((Date.now() - startTime) / 1000);
-    
-    particles = [];
-    for (let i = 0; i < 30; i++) {
-        particles.push({
-            x: player.x + player.width / 2,
-            y: player.y + player.height / 2,
-            vx: (Math.random() - 0.5) * 15,
-            vy: (Math.random() - 0.5) * 15,
-            size: Math.random() * 8 + 4,
-            life: 1.0,
-            rotation: Math.random() * Math.PI * 2,
-            rotSpeed: (Math.random() - 0.5) * 0.5
-        });
-    }
+    spawnParticles(player.x + player.width/2, player.y + player.height/2, 30, playerColor);
     explosionTimer = 60; 
 }
 
@@ -438,9 +487,15 @@ function resetGame() {
     cloudOffset = 0;
     startTime = Date.now();
     
+    isWarning = false;
+    warningTimer = 0;
+    slowMoTimer = 0;
+    longestWord = "";
+    totalWords = 0;
+
     globalSpeed = 2; 
     distanceTraveled = 0;
-    nextLetterDistance = 100; // Increased spawn rate (1.5x)
+    nextLetterDistance = 100;
     nextObstacleDistance = 600;
     
     player.x = 50;
@@ -458,12 +513,31 @@ function isSpawnAreaClear() {
     return true;
 }
 
+function getWildcardChar() {
+    const validNext = gameDictionary.getValidNextLetters(currentWord);
+    if (validNext.length > 0) return validNext[Math.floor(Math.random() * validNext.length)];
+    return 'A'; 
+}
+
 // --- MAIN GAME LOOP ---
 function gameLoop() {
     if (gameState === STATE_PLAYING) {
         
         const secondsPlayed = Math.floor((Date.now() - startTime) / 1000);
-        globalSpeed = Math.min(baseSpeed + (secondsPlayed * 0.01), maxGlobalSpeed);
+        
+        // Apply Slow-Mo Effect if active
+        if (slowMoTimer > 0) {
+            slowMoTimer--;
+            globalSpeed = Math.min(baseSpeed + (secondsPlayed * 0.01), maxGlobalSpeed) * 0.5;
+        } else {
+            globalSpeed = Math.min(baseSpeed + (secondsPlayed * 0.01), maxGlobalSpeed);
+        }
+
+        // Apply Warning Explosion Timer if bad letter was picked
+        if (isWarning) {
+            warningTimer--;
+            if (warningTimer <= 0) triggerExplosion();
+        }
         
         distanceTraveled += globalSpeed;
         player.wasGroundedLastFrame = player.isGrounded;
@@ -498,7 +572,6 @@ function gameLoop() {
         if (distanceTraveled >= nextLetterDistance) {
             if (isSpawnAreaClear()) {
                 spawnLetter();
-                // Increased spawn rate logic: Math.random() * 200 + 133
                 nextLetterDistance = distanceTraveled + (Math.random() * 200 + 133); 
             } else {
                 nextLetterDistance += 20; 
@@ -529,13 +602,28 @@ function gameLoop() {
                 player.y < letter.y + letter.height && player.y + player.height > letter.y) {
                 
                 playSound('collect'); 
-                currentWord += letter.char;
-                score += 1; 
-                activeLetters.splice(i, 1);
                 
-                if (!gameDictionary.isValidPrefix(currentWord)) {
-                    triggerExplosion();
+                // NEW: Power-Up Logic
+                if (letter.type === 'bomb') {
+                    activeObstacles.forEach(obs => {
+                        spawnParticles(obs.x + obs.width/2, obs.y + obs.height/2, 10, '#9E9E9E');
+                    });
+                    activeObstacles.length = 0;
+                } else if (letter.type === 'freeze') {
+                    slowMoTimer = 180; // Slow down for 3 seconds
+                } else {
+                    currentWord += letter.type === 'wildcard' ? getWildcardChar() : letter.realChar;
+                    
+                    if (!gameDictionary.isValidPrefix(currentWord)) {
+                        isWarning = true;
+                        warningTimer = 90; // 1.5 seconds to press Backspace
+                    } else {
+                        isWarning = false;
+                        warningTimer = 0;
+                    }
                 }
+                
+                activeLetters.splice(i, 1);
                 continue; 
             }
             if (letter.x + letter.width < 0) activeLetters.splice(i, 1);
@@ -543,15 +631,17 @@ function gameLoop() {
     } 
     else if (gameState === STATE_EXPLODING) {
         explosionTimer--;
-        particles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= 0.015; 
-            p.rotation += p.rotSpeed; 
-        });
-        if (explosionTimer <= 0) {
-            triggerGameOver();
-        }
+        if (explosionTimer <= 0) triggerGameOver();
+    }
+
+    // BUG FIX: Unconditionally update all particles here so Bomb Particles fade away even in STATE_PLAYING
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.015; 
+        p.rotation += p.rotSpeed; 
+        if (p.life <= 0) particles.splice(i, 1);
     }
 
     if (gameState) {
