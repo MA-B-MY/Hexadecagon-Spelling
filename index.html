@@ -14,7 +14,6 @@
             <h1 class="menu-title">SPELL RUNNER</h1>
             <p class="menu-score" id="bestScoreDisplay">Highest Record: 0</p>
             
-            <!-- NEW: Native Color Adjuster -->
             <div class="color-picker">
                 <p>Select Character Color:</p>
                 <div class="color-options">
@@ -27,8 +26,7 @@
         </div>
     </div>
 
-    <!-- HOW TO PLAY SCREEN (Click anywhere to start) -->
-    <!-- HOW TO PLAY SCREEN (Click anywhere to start) -->
+    <!-- HOW TO PLAY SCREEN -->
     <div id="how-to-play-screen" class="screen" style="cursor: pointer;">
         <div class="dict-container" style="text-align: center; pointer-events: none; width: 80%; max-width: 600px;">
             <h1 style="color: #FF9800; margin-bottom: 20px; font-size: 42px; text-shadow: 2px 2px 0px #000;">HOW TO PLAY</h1>
@@ -36,18 +34,18 @@
             <div style="background-color: rgba(0, 0, 0, 0.75); padding: 25px; border-radius: 12px; border: 3px solid #FF9800; margin-bottom: 30px; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
                 <h3 style="color: #4CAF50; margin-bottom: 12px; font-size: 22px;">🎮 Controls</h3>
                 <ul style="list-style: none; padding: 0; margin-bottom: 25px; font-size: 18px; line-height: 1.8; color: #EEE;">
-                    <li><strong style="color: #FFEB3B;">[W] / [↑]</strong> : Jump (Press twice to Double Jump!)</li>
+                    <li><strong style="color: #FFEB3B;">[W] / [↑]</strong> : Jump (Press twice for Double Jump)</li>
                     <li><strong style="color: #FFEB3B;">[A] / [D]</strong> : Move Left / Right</li>
                     <li><strong style="color: #FFEB3B;">[SPACE]</strong> : Submit your completed word</li>
+                    <li><strong style="color: #F44336;">[BACKSPACE]</strong> : Undo your last letter if you make a mistake!</li>
                     <li><strong style="color: #FFEB3B;">[P]</strong> : Pause Game</li>
                 </ul>
 
-                <h3 style="color: #4CAF50; margin-bottom: 12px; font-size: 22px;">🎯 The Rules</h3>
+                <h3 style="color: #4CAF50; margin-bottom: 12px; font-size: 22px;">🎯 New Mechanics</h3>
                 <ul style="list-style: none; padding: 0; margin-bottom: 0; font-size: 18px; line-height: 1.8; color: #EEE;">
-                    <li>Collect floating letters to build words (min. 2 letters).</li>
-                    <li>Submit valid words with the Spacebar to score points!</li>
-                    <li><span style="color: #F44336; font-weight: bold;">⚠️ DANGER:</span> If you spell a fake word, you explode!</li>
-                    <li><span style="color: #F44336; font-weight: bold;">⚠️ DANGER:</span> Don't let obstacles push you off the left screen!</li>
+                    <li>Submit valid words to score! (Longer words = Huge multipliers)</li>
+                    <li><span style="color: #00FFFF; font-weight: bold;">🎁 POWER-UPS:</span> Grab 💣 (Bomb), ❄️ (Slow), or ? (Wildcard)!</li>
+                    <li><span style="color: #F44336; font-weight: bold;">⚠️ WARNING:</span> If you grab a bad letter, you have 1.5s to press Backspace before you explode!</li>
                 </ul>
             </div>
             
@@ -74,7 +72,6 @@
         </div>
     </div>
 
-    <!-- Load scripts at the end -->
     <script src="design.js"></script>
     <script src="game.js"></script>
     <script src="dictionary.js"></script>
