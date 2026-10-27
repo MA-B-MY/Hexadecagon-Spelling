@@ -92,6 +92,22 @@ function playSound(type) {
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.start(now);
         osc.stop(now + 0.2);
+    } else if (type === 'powerup') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+    } else if (type === 'backspace') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
     }
 }
 
@@ -133,7 +149,6 @@ class Trie {
         }
         return node.isEndOfWord;
     }
-    // NEW: Needed for Smart Spawner & Wildcards
     getValidNextLetters(prefix) {
         if (prefix === "") return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
         let node = this.root;
@@ -163,7 +178,6 @@ let startTime = 0;
 let pauseStartTime = 0;
 let timePlayed = 0;
 
-// NEW: System Mechanics State Variables
 let isWarning = false;
 let warningTimer = 0;
 let slowMoTimer = 0;
@@ -201,7 +215,7 @@ resizeCanvas();
 
 const keys = { left: false, right: false, jump: false };
 
-const startBtn = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 + 60, width: 200, height: 60 };
+const startBtn = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 + 110, width: 200, height: 60 };
 const pauseBtn = { x: GAME_WIDTH - 60, y: 10, width: 50, height: 50 }; 
 const pauseMenuResumeBtn  = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 - 40, width: 200, height: 40 };
 const pauseMenuRestartBtn = { x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 + 10, width: 200, height: 40 };
@@ -282,10 +296,10 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // NEW: Backspace Mechanic
     if (gameState === STATE_PLAYING && e.key === 'Backspace') {
         if (currentWord.length > 0) {
             currentWord = currentWord.slice(0, -1);
+            playSound('backspace');
             if (gameDictionary.isValidPrefix(currentWord)) {
                 isWarning = false; 
                 warningTimer = 0;
@@ -323,7 +337,6 @@ window.addEventListener('keydown', (e) => {
 
         if (e.key === ' ') {
             if (gameDictionary.isValidWord(currentWord)) {
-                // NEW: Exponential Scoring (Length^2 * 10)
                 let wordScore = Math.pow(currentWord.length, 2) * 10;
                 score += wordScore;
                 
@@ -357,7 +370,6 @@ let particles = [];
 let explosionTimer = 0;
 let frameCount = 0;
 
-// NEW: Generates explosion particles at a specific spot
 function spawnParticles(x, y, count, color) {
     for (let i = 0; i < count; i++) {
         particles.push({
@@ -373,7 +385,6 @@ function spawnParticles(x, y, count, color) {
     }
 }
 
-// NEW: Smart Spawner
 function spawnLetter() {
     const isTop = Math.random() > 0.5;
     let type = 'letter'; 
@@ -384,7 +395,6 @@ function spawnLetter() {
     else if (rand < 0.08) type = 'freeze';
     else if (rand < 0.13) type = 'wildcard';
     else {
-        // Smart Spawner: 75% chance to spawn a character that guarantees a valid prefix continuation
         const validNext = gameDictionary.getValidNextLetters(currentWord);
         if (validNext.length > 0 && Math.random() < 0.75) {
             charToSpawn = validNext[Math.floor(Math.random() * validNext.length)];
@@ -425,11 +435,13 @@ function spawnObstacle() {
     }
 }
 
+// BUGFIX: Separated bottom collision detection to stop instantly teleporting player horizontally
 function handleCollision(box) {
     if (player.x < box.x + box.width && player.x + player.width > box.x &&
         player.y < box.y + box.height && player.y + player.height > box.y) {
         
         let wasAbove = (player.y + player.height - player.velocityY) <= box.y + 0.1;
+        let wasBelow = (player.y - player.velocityY) >= box.y + box.height - 0.1;
 
         if (player.velocityY > 0 && wasAbove) {
             if (!player.wasGroundedLastFrame) playSound('land'); 
@@ -437,7 +449,12 @@ function handleCollision(box) {
             player.velocityY = 0;
             player.isGrounded = true;
             player.jumps = 0; 
+        } else if (player.velocityY < 0 && wasBelow) {
+            // Player hit bottom of the platform
+            player.y = box.y + box.height;
+            player.velocityY = 0;
         } else {
+            // Player hit side of the platform
             let playerCenter = player.x + (player.width / 2);
             let boxCenter = box.x + (box.width / 2);
             
@@ -525,7 +542,6 @@ function gameLoop() {
         
         const secondsPlayed = Math.floor((Date.now() - startTime) / 1000);
         
-        // Apply Slow-Mo Effect if active
         if (slowMoTimer > 0) {
             slowMoTimer--;
             globalSpeed = Math.min(baseSpeed + (secondsPlayed * 0.01), maxGlobalSpeed) * 0.5;
@@ -533,7 +549,6 @@ function gameLoop() {
             globalSpeed = Math.min(baseSpeed + (secondsPlayed * 0.01), maxGlobalSpeed);
         }
 
-        // Apply Warning Explosion Timer if bad letter was picked
         if (isWarning) {
             warningTimer--;
             if (warningTimer <= 0) triggerExplosion();
@@ -601,22 +616,26 @@ function gameLoop() {
             if (player.x < letter.x + letter.width && player.x + player.width > letter.x &&
                 player.y < letter.y + letter.height && player.y + player.height > letter.y) {
                 
-                playSound('collect'); 
+                if (letter.type === 'bomb' || letter.type === 'freeze' || letter.type === 'wildcard') {
+                    playSound('powerup');
+                } else {
+                    playSound('collect'); 
+                }
                 
-                // NEW: Power-Up Logic
                 if (letter.type === 'bomb') {
                     activeObstacles.forEach(obs => {
                         spawnParticles(obs.x + obs.width/2, obs.y + obs.height/2, 10, '#9E9E9E');
                     });
                     activeObstacles.length = 0;
                 } else if (letter.type === 'freeze') {
-                    slowMoTimer = 180; // Slow down for 3 seconds
+                    // BUGFIX: Set to 300 frames to make it exactly 5 seconds
+                    slowMoTimer = 300; 
                 } else {
                     currentWord += letter.type === 'wildcard' ? getWildcardChar() : letter.realChar;
                     
                     if (!gameDictionary.isValidPrefix(currentWord)) {
                         isWarning = true;
-                        warningTimer = 90; // 1.5 seconds to press Backspace
+                        warningTimer = 90; // 1.5 seconds
                     } else {
                         isWarning = false;
                         warningTimer = 0;
@@ -634,7 +653,6 @@ function gameLoop() {
         if (explosionTimer <= 0) triggerGameOver();
     }
 
-    // BUG FIX: Unconditionally update all particles here so Bomb Particles fade away even in STATE_PLAYING
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx;
@@ -676,13 +694,15 @@ async function initGame() {
             try {
                 localStorage.setItem('spellRunnerDictionary', JSON.stringify(words));
             } catch (e) {
-                console.warn("Chrome Extension Storage Quota Exceeded! Running from RAM instead.");
+                console.warn("Storage Quota Exceeded! Running from RAM instead.");
             }
         }
         words.forEach(word => gameDictionary.insert(word.trim().toUpperCase()));
         
     } catch (error) {
-        console.error("Failed to load dictionary.", error);
+        console.error("Failed to load dictionary. Loading fallback list.", error);
+        const fallbackWords = ["CAT", "DOG", "RUN", "GAME", "CODE", "FAST", "JUMP", "SPELL", "WORD", "PLAY"];
+        fallbackWords.forEach(word => gameDictionary.insert(word));
     } finally {
         htmlStartBtn.textContent = "START GAME";
         htmlStartBtn.style.opacity = "1";
