@@ -35,7 +35,7 @@ function drawGameScene() {
     ctx.imageSmoothingEnabled = false;
 
    // 1. Draw solid single-color background
-    ctx.fillStyle = '#87CEEB'; // Sky Blue. Change this hex code to your preferred color (e.g., '#1E1E1E' for dark gray)
+    ctx.fillStyle = '#87CEEB'; 
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     // 2. Draw Parallax Clouds (Background)
@@ -67,7 +67,6 @@ function drawGameScene() {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = playerColor;
                 
-                // Draw rotating square shards for the explosion
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.rotation);
@@ -75,9 +74,8 @@ function drawGameScene() {
                 ctx.restore();
             }
         });
-        ctx.globalAlpha = 1.0; // Reset alpha so it doesn't fade the rest of the game
+        ctx.globalAlpha = 1.0; 
     } else {
-        // Draw the normal rolling player
         const playerRadius = player.width / 2;
         const playerCenterX = player.x + playerRadius;
         const playerCenterY = player.y + playerRadius;
@@ -121,8 +119,20 @@ function drawGameScene() {
 
     // 7. Draw Gameplay HUD (Word & Score)
     if (gameState === STATE_PLAYING || gameState === STATE_PAUSED || gameState === STATE_EXPLODING) {
+        // Dynamically calculate HUD height based on active states
+        let hudHeight = 100;
+        let showValid = gameDictionary.isValidWord(currentWord) && !isWarning;
+        
+        if (isWarning || showValid || slowMoTimer > 0) {
+            if ((isWarning || showValid) && slowMoTimer > 0) {
+                hudHeight = 135;
+            } else {
+                hudHeight = 110;
+            }
+        }
+        
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(10, 10, 300, 100);
+        ctx.fillRect(10, 10, 420, hudHeight);
 
         ctx.fillStyle = '#FFF'; 
         ctx.font = 'bold 24px Arial';
@@ -131,14 +141,32 @@ function drawGameScene() {
         ctx.fillText(`Word: ${currentWord}`, 20, 20);
         ctx.fillText(`Score: ${score}`, 20, 50);
 
-        if (gameDictionary.isValidWord(currentWord)) {
-            ctx.fillStyle = '#4CAF50'; 
-            ctx.fillText("Valid word! Press SPACE to submit!", 20, 80);
+        let nextTextY = 80;
+
+        if (isWarning) {
+            const remainingSec = (warningTimer / 60).toFixed(1);
+            ctx.fillStyle = '#F44336';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(`⚠️ INVALID! BACKSPACE IN: ${remainingSec}s`, 20, nextTextY);
+            nextTextY += 25;
+        } else if (showValid) {
+            ctx.fillStyle = '#00FFFF'; 
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText("Valid word! Press SPACE to submit!", 20, nextTextY);
+            nextTextY += 25;
+        }
+
+        if (slowMoTimer > 0) {
+            const freezeSec = (slowMoTimer / 60).toFixed(1);
+            ctx.fillStyle = '#00FFFF';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(`❄️ FREEZE ACTIVE: ${freezeSec}s`, 20, nextTextY);
         }
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(pauseBtn.x, pauseBtn.y, pauseBtn.width, pauseBtn.height);
-        ctx.fillStyle = '#4CAF50';
+        
+        ctx.fillStyle = '#00FFFF';
         ctx.font = '24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -190,24 +218,30 @@ function drawGameScene() {
         if (isNewRecord) {
             ctx.fillStyle = '#FFEB3B'; 
             ctx.font = 'bold 48px Arial';
-            ctx.fillText('🏆 NEW RECORD! 🏆', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100);
+            ctx.fillText('🏆 NEW RECORD! 🏆', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120);
         } else {
             ctx.fillStyle = '#F44336'; 
             ctx.font = 'bold 48px Arial';
-            ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100);
+            ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120);
         }
         
+        // Extended stats overlay block included from earlier
         ctx.fillStyle = '#FFF';
-        ctx.font = '24px Arial';
-        ctx.fillText(`Current Score: ${score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
-        ctx.fillText(`Best Score: ${bestScore}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
-        ctx.fillText(`Time Played: ${timePlayed}s`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
+        ctx.font = '22px Arial';
+        ctx.fillText(`Current Score: ${score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60);
+        ctx.fillText(`Best Score: ${bestScore}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30);
+        
+        ctx.fillStyle = '#4CAF50';
+        ctx.fillText(`Words Formed: ${totalWords}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 5);
+        ctx.fillText(`Longest Word: ${longestWord || 'None'}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 35);
+        ctx.fillStyle = '#FFF';
+        ctx.fillText(`Time Played: ${timePlayed}s`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 65);
         
         ctx.fillStyle = '#007BFF';
-        ctx.fillRect(startBtn.x, startBtn.y + 40, startBtn.width, startBtn.height);
+        ctx.fillRect(startBtn.x, startBtn.y, startBtn.width, startBtn.height);
         
         ctx.fillStyle = '#FFF';
         ctx.font = 'bold 24px Arial';
-        ctx.fillText('RESTART', startBtn.x + (startBtn.width / 2), startBtn.y + 40 + (startBtn.height / 2));
+        ctx.fillText('RESTART', startBtn.x + (startBtn.width / 2), startBtn.y + (startBtn.height / 2));
     }
 }
